@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MizuRaBot WA - Free Pairing Gateway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            /* Background gambar anime aesthetic / lofi cyberpunk */
+            background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(88, 28, 135, 0.60)), 
+                        url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .font-hud {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        /* Efek kaca bersinar (Glassmorphism neon) */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 
+                        0 0 20px rgba(244, 63, 94, 0.1);
+        }
+        .neon-glow:focus {
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.6);
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex items-center justify-center min-h-screen p-4 overflow-x-hidden">
+
+    <div class="absolute top-10 left-10 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="glass-panel p-8 rounded-3xl max-w-md w-full relative overflow-hidden transform transition-all duration-500 hover:scale-[1.01]">
+        
+        <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-rose-500 to-purple-500"></div>
+        
+        <div class="flex flex-col items-center mb-6">
+            <div class="w-20 h-20 rounded-2xl overflow-hidden border-2 border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)] mb-3 bg-slate-800">
+                <img src="https://api.dicebear.com/7.x/bottts-neutral/svg?seed=NekoBot" alt="Mascot" class="w-full h-full object-cover">
+            </div>
+            <h1 class="text-3xl font-extrabold font-hud tracking-tight bg-gradient-to-r from-rose-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
+                MizuRaBot Wa
+            </h1>
+            <p class="text-slate-400 text-xs mt-1 font-medium tracking-wide">🥀FREE MODEL PAIRING SYSTEM</p>
+        </div>
+
+        <div id="input-container" class="space-y-4 relative z-10">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-rose-400 mb-2 font-hud">
+                    Nomor WhatsApp Kamu
+                </label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-slate-400 font-semibold text-sm">+</span>
+                    <input type="text" id="phone" placeholder="628123456789" 
+                        class="w-full pl-8 pr-4 py-3.5 bg-slate-950/60 border border-slate-700 rounded-xl focus:outline-none focus:border-rose-500 neon-glow text-white placeholder-slate-500 font-semibold tracking-wide transition-all">
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1.5">Gunakan kode negara, contoh: 628xxx</p>
+            </div>
+            
+            <button onclick="requestPairing()" id="btn-submit"
+                class="w-full bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-600 hover:to-purple-700 text-white font-bold py-4 rounded-xl transition duration-300 shadow-[0_4px_15px_rgba(244,63,94,0.3)] active:scale-[0.98] cursor-pointer font-hud tracking-wider">
+                LINK DENGAN KODE
+            </button>
+        </div>
+
+        <div class="mt-6 text-center space-y-4 relative z-10">
+            <div class="flex items-center justify-center space-x-2">
+                <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+                <p id="status-text" class="text-slate-400 text-xs font-medium tracking-wide">Free Model Bot WhatsApp</p>
+            </div>
+            
+            <div id="code-box" class="hidden animate-fade-in">
+                <div id="code-display" onclick="copyCode()" 
+                    class="text-4xl font-hud font-bold tracking-widest bg-slate-950/80 py-5 px-6 rounded-2xl border-2 border-dashed border-purple-500 text-fuchsia-400 shadow-[inset_0_0_15px_rgba(217,70,239,0.15)] cursor-pointer select-all active:scale-[0.99] transition-all duration-150">
+                    ---- ----
+                </div>
+                <p id="instruction" class="text-[11px] text-slate-400 mt-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-relaxed">
+                    Tap kodenya buat salin. Buka <span class="text-rose-400 font-semibold">WhatsApp > Perangkat Tertaut > Tautkan Perangkat > Tautkan dengan nomor telepon saja</span>, lalu paste kodenya di sana.
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-slate-800/60 text-center text-[10px] text-slate-600 font-hud tracking-widest">
+            SYSTEM STATUS: ONLINE // V2.0.26
+        </div>
+    </div>
+
+    <script>
+        // Ganti dengan IP/Domain VPS backend Node.js temen kamu
+        const socket = io("http://IP_VPS_TEMEN_KAMU:3000"); 
+
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const btnSubmit = document.getElementById('btn-submit');
+
+        function requestPairing() {
+            const phoneVal = document.getElementById('phone').value;
+            if (!phoneVal) {
+                alert('Woi, nomor HP-nya diisi dulu lah! 😂');
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = 'GENERATING CODE...';
+            btnSubmit.classList.add('opacity-50');
+
+            // Kirim nomor ke VPS
+            socket.emit('request-pairing', phoneVal);
+        }
+
+        socket.on('status', (msg) => {
+            statusText.innerText = msg;
+            
+            // Ubah warna dot status biar dinamis
+            if (msg.includes('Masukkan kode')) {
+                statusDot.className = "w-2 h-2 rounded-full bg-fuchsia-500 animate-ping";
+            } else if (msg.includes('Berhasil')) {
+                statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+            } else if (msg.includes('Terjadi kesalahan') || msg.includes('terputus')) {
+                statusDot.className = "w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+            } else {
+                statusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+            }
+        });
+
+        socket.on('pairing-code', (code) => {
+            const formattedCode = code.match(/.{1,4}/g).join('-');
+            
+            const codeBox = document.getElementById('code-box');
+            const codeDisplay = document.getElementById('code-display');
+            
+            codeDisplay.innerText = formattedCode;
+            codeBox.classList.remove('hidden');
+            
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = 'LINK DENGAN KODE';
+            btnSubmit.classList.remove('opacity-50');
+        });
+
+        socket.on('success', (isSuccess) => {
+            if(isSuccess) {
+                document.getElementById('code-box').classList.add('hidden');
+                document.getElementById('input-container').innerHTML = `
+                    <div class="text-center p-4 bg-emerald-950/40 border border-emerald-500/30 rounded-2xl animate-bounce">
+                        <p class="text-emerald-400 font-bold font-hud text-lg">🤖 BOT IS ACTIVE!</p>
+                        <p class="text-xs text-slate-300 mt-1">Sesi berhasil disimpan di server. Kamu sudah bisa tutup halaman ini.</p>
+                    </div>
+                `;
+            }
+        });
+
+        function copyCode() {
+            const codeText = document.getElementById('code-display').innerText.replace('-', '');
+            navigator.clipboard.writeText(codeText);
+            
+            const originalText = statusText.innerText;
+            statusText.innerText = "📋 Kode berhasil disalin ke clipboard!";
+            setTimeout(() => {
+                statusText.innerText = originalText;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
