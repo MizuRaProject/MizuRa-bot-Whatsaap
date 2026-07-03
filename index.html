@@ -11,7 +11,6 @@
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            /* Background gambar anime aesthetic / lofi cyberpunk */
             background: linear-gradient(rgba(15, 23, 42, 0.75), rgba(88, 28, 135, 0.60)), 
                         url('https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop');
             background-size: cover;
@@ -21,7 +20,6 @@
         .font-hud {
             font-family: 'Space Grotesk', sans-serif;
         }
-        /* Efek kaca bersinar (Glassmorphism neon) */
         .glass-panel {
             background: rgba(15, 23, 42, 0.65);
             backdrop-filter: blur(16px);
@@ -51,7 +49,7 @@
             <h1 class="text-3xl font-extrabold font-hud tracking-tight bg-gradient-to-r from-rose-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
                 MizuRaBot Wa
             </h1>
-            <p class="text-slate-400 text-xs mt-1 font-medium tracking-wide">🥀FREE MODEL PAIRING SYSTEM</p>
+            <p class="text-slate-400 text-xs mt-1 font-medium tracking-wide">🥀 FREE MODEL PAIRING SYSTEM</p>
         </div>
 
         <div id="input-container" class="space-y-4 relative z-10">
@@ -96,12 +94,28 @@
     </div>
 
     <script>
-        // Ganti dengan IP/Domain VPS backend Node.js temen kamu
-        const socket = io("http://IP_VPS_TEMEN_KAMU:3000"); 
+        // UPDATE: Mendeteksi protokol halaman secara otomatis + memaksa opsi websocket/polling alternatif
+        const targetProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        const socket = io(`${targetProtocol}//nodepanel.lynzzofficial.com:2443`, {
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            rejectUnauthorized: false
+        }); 
 
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
         const btnSubmit = document.getElementById('btn-submit');
+
+        // Indikator mendeteksi apakah koneksi socket berhasil tersambung ke backend
+        socket.on('connect', () => {
+            statusText.innerText = "Terhubung ke Server Backend!";
+            statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+        });
+
+        socket.on('connect_error', (err) => {
+            statusText.innerText = "Gagal menyambung. Cek protokol alamat web kamu!";
+            statusDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-pulse";
+        });
 
         function requestPairing() {
             const phoneVal = document.getElementById('phone').value;
@@ -114,20 +128,21 @@
             btnSubmit.innerText = 'GENERATING CODE...';
             btnSubmit.classList.add('opacity-50');
 
-            // Kirim nomor ke VPS
             socket.emit('request-pairing', phoneVal);
         }
 
         socket.on('status', (msg) => {
             statusText.innerText = msg;
             
-            // Ubah warna dot status biar dinamis
             if (msg.includes('Masukkan kode')) {
                 statusDot.className = "w-2 h-2 rounded-full bg-fuchsia-500 animate-ping";
             } else if (msg.includes('Berhasil')) {
                 statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
             } else if (msg.includes('Terjadi kesalahan') || msg.includes('terputus')) {
                 statusDot.className = "w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = 'LINK DENGAN KODE';
+                btnSubmit.classList.remove('opacity-50');
             } else {
                 statusDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
             }
